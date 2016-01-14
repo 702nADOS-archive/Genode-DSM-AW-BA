@@ -1,0 +1,49 @@
+set build_components {
+    core init
+    drivers/timer drivers/nic
+    broker dummy2
+}
+
+build $build_components
+
+create_boot_directory
+
+install_config {
+<config>
+    <parent-provides>
+        <service name="ROM"/>
+        <service name="RAM"/>
+        <service name="IRQ"/>
+        <service name="IO_MEM"/>
+        <service name="CAP"/>
+        <service name="RM"/>
+        <service name="LOG"/>
+        <service name="SIGNAL"/>
+    </parent-provides>
+    <default-route>
+        <any-service><parent/><any-child/></any-service>
+    </default-route>
+    <start name="timer">
+        <resource name="RAM" quantum="1M"/>
+        <provides><service name="Timer"/></provides>
+    </start>
+    <start name="nic_drv">
+        <resource name="RAM" quantum="4M"/>
+        <provides><service name="Nic"/></provides>
+    </start>
+    <start name="broker">
+        <resource name="RAM" quantum="4M"/>
+        <provides><service name="Broker"/></provides>
+        <config local-ip="10.0.0.1" remote-ip="10.0.0.2"/>
+    </start>
+    <start name="dummy2">
+        <resource name="RAM" quantum="1M"/>
+    </start>
+</config>
+}
+
+build_boot_image "core init timer ld.lib.so libc.lib.so lwip.lib.so broker dummy2 nic_drv"
+
+append qemu_args " -nographic -m 64 -net nic,model=lan9118,macaddr=22:22:22:22:22:22 -net vde,sock=/tmp/switch1 "
+
+run_genode_until forever
